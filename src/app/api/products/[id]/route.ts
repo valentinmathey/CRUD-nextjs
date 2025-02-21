@@ -78,7 +78,7 @@ export async function PUT(request: Request): Promise<Response> {
         }
 
         // 🔹 Ejecutar la consulta `UPDATE` en la base de datos
-        const result: [ResultSetHeader] = await pool.query(
+        await pool.query(
             `UPDATE product SET ${fields} WHERE id = ?`,
             [...values, productId]
         );
@@ -112,7 +112,7 @@ export async function DELETE(request: Request) {
         }
 
         // Ejecutar la consulta de eliminación
-        const result: [ResultSetHeader] = await pool.query(
+        await pool.query(
             "DELETE FROM product WHERE id = ?",
             [productId]
         );
