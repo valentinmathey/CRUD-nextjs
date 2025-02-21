@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ResultSetHeader } from "mysql2/promise"; // Importamos ResultSetHeader para tipado
+import { ResultSetHeader, RowDataPacket } from "mysql2/promise"; // Importamos ResultSetHeader para tipado
 import pool from "@/libs/db";
 
 // ✅ Interfaz para los datos del producto
@@ -8,6 +8,7 @@ interface Product {
     name: string;
     description?: string;
     price: number;
+    createAt?: string;
 }
 
 // ✅ GET: Obtener un producto por ID
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
 }
 
 // ✅ PUT: Actualizar un producto por ID
-export async function PUT(request: Request) {
+export async function PUT(request: Request): Promise<Response> {
     try {
         // 🔹 Extraer el ID del producto desde la URL
         const url = new URL(request.url);
@@ -60,35 +61,30 @@ export async function PUT(request: Request) {
             return NextResponse.json({ message: "No hay datos para actualizar" }, { status: 400 });
         }
 
-        // 🔹 Excluir el campo `createAt` para evitar sobreescribirlo
+        // 🔹 Excluir `createAt` de la actualización
         const fields = Object.keys(data)
-            .filter((key) => key !== "createAt") // Evita actualizar `createAt`
-            .map((key) => `${key} = ?`) // Formato adecuado para SQL
+            .filter((key) => key !== "createAt")
+            .map((key) => `${key} = ?`)
             .join(", ");
 
         // 🔹 Obtener los valores de los campos a actualizar (excluyendo `createAt`)
         const values = Object.entries(data)
-            .filter(([key]) => key !== "createAt") // Filtrar `createAt`
-            .map(([, value]) => value); // Obtener solo los valores
+            .filter(([key]) => key !== "createAt")
+            .map(([, value]) => value);
 
-        // 🔹 Si no hay campos válidos para actualizar, devolver error
+        // 🔹 Si no hay campos válidos para actualizar, retornar error
         if (!fields.length) {
             return NextResponse.json({ message: "Nada que actualizar" }, { status: 400 });
         }
 
         // 🔹 Ejecutar la consulta `UPDATE` en la base de datos
-        const result: any = await pool.query(
+        const result: [ResultSetHeader] = await pool.query(
             `UPDATE product SET ${fields} WHERE id = ?`,
             [...values, productId]
         );
 
-        // 🔹 Verificar si se actualizó algún registro
-        if (result.affectedRows === 0) {
-            return NextResponse.json({ message: "Producto no encontrado" }, { status: 404 });
-        }
-
-        // 🔹 Consultar el producto actualizado para devolverlo en la respuesta
-        const updatedProduct: any = await pool.query(
+        // 🔹 Consultar el producto actualizado
+        const [updatedProduct]: [RowDataPacket[]] = await pool.query(
             "SELECT * FROM product WHERE id = ?",
             [productId]
         );
