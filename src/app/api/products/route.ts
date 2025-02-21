@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/libs/db";
+import { ResultSetHeader } from "mysql2/promise"; // Importamos ResultSetHeader para tipado
 
 // ✅ Interfaz para los datos del producto
 interface Product {
@@ -12,7 +13,7 @@ interface Product {
 // ✅ GET: Obtener todos los productos
 export async function GET() {
     try {
-        const results = await pool.query("SELECT * FROM product") as [Product[]];
+        const [results]: [Product[]] = await pool.query("SELECT * FROM product");
         return NextResponse.json(results);
     } catch (error) {
         console.error("Error en GET /products:", error);
@@ -38,13 +39,13 @@ export async function POST(request: Request) {
         }
 
         // Insertar el producto en la base de datos
-        const result = await pool.query(
+        const [result]: [ResultSetHeader] = await pool.query(
             "INSERT INTO product (name, description, price) VALUES (?, ?, ?)",
             [name, description, price]
         );
 
         // Obtener `insertId` del resultado
-        const insertId = (result as any).insertId; 
+        const insertId = result.insertId;
 
         // Retornar respuesta con el producto creado
         return NextResponse.json(
@@ -65,4 +66,3 @@ export async function POST(request: Request) {
         );
     }
 }
-

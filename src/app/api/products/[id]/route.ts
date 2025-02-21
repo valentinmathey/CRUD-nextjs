@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/libs/db";
+import { ResultSetHeader } from "mysql2/promise"; // Importamos ResultSetHeader para tipado
 
 // ✅ Interfaz para los datos del producto
 interface Product {
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
         }
 
         // Consulta a la base de datos
-        const result = await pool.query("SELECT * FROM product WHERE id = ?", [productId]) as [Product[]];
+        const [result]: [Product[]] = await pool.query("SELECT * FROM product WHERE id = ?", [productId]);
 
         // Si no se encuentra el producto
         if (!result.length) {
@@ -49,27 +50,23 @@ export async function PUT(request: Request) {
         // Obtener datos a actualizar
         const data: Partial<Product> = await request.json();
 
-        // 🔴 Excluir createAt para evitar el error de formato de fecha
-        delete (data as any).createAt;
-
         // Ejecutar la consulta de actualización
-        const result = await pool.query(
+        const [result]: [ResultSetHeader] = await pool.query(
             "UPDATE product SET ? WHERE id = ?",
             [data, productId]
-        ) as any;
+        );
 
         // Verificar si el producto se modificó correctamente
-        if (!result || result.affectedRows === 0) {
+        if (result.affectedRows === 0) {
             return NextResponse.json({ message: "Producto no encontrado" }, { status: 404 });
         }
 
-        // Consultar el producto actualizado con tipado correcto
-        const updatedProduct = await pool.query(
+        // Consultar el producto actualizado
+        const [updatedProduct]: [Product[]] = await pool.query(
             "SELECT * FROM product WHERE id = ?",
             [productId]
-        ) as Product[];
+        );
 
-        // ✅ Convertir a JSON serializable
         return NextResponse.json(updatedProduct[0]);
 
     } catch (error) {
@@ -77,7 +74,6 @@ export async function PUT(request: Request) {
         return NextResponse.json({ message: (error as Error).message }, { status: 500 });
     }
 }
-
 
 // ✅ DELETE: Eliminar un producto por ID
 export async function DELETE(request: Request) {
@@ -93,13 +89,13 @@ export async function DELETE(request: Request) {
         }
 
         // Ejecutar la consulta de eliminación
-        const result = await pool.query(
+        const [result]: [ResultSetHeader] = await pool.query(
             "DELETE FROM product WHERE id = ?",
             [productId]
-        ) as any;
+        );
 
         // Verificar si el producto existía
-        if (!result || result.affectedRows === 0) {
+        if (result.affectedRows === 0) {
             return NextResponse.json({ message: "Producto no encontrado" }, { status: 404 });
         }
 
@@ -110,4 +106,3 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ message: (error as Error).message }, { status: 500 });
     }
 }
-
