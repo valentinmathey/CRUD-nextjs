@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ResultSetHeader, RowDataPacket } from "mysql2/promise"; // Importamos ResultSetHeader para tipado
+import { RowDataPacket } from "mysql2/promise"; // Importamos ResultSetHeader para tipado
 import pool from "@/libs/db";
 
 // ✅ Interfaz para los datos del producto
